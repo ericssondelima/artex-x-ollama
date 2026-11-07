@@ -1,0 +1,5 @@
+# Local deployment secrets (copy from .env.example)
+.env
+
+# Runtime data: mitmproxy CA private key, traffic DB, transcripts
+data/
