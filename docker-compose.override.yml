@@ -1,0 +1,8 @@
+# Local override: host port 8787 is already taken by the CTF Stack Monitor.
+services:
+  artex:
+    ports: !override
+      - "8797:8787"
+      - "127.0.0.1:8798:8788"
+    volumes:
+      - /home/user/hexstrike-ai:/hexstrike:ro
