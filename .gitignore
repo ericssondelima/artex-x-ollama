@@ -1,5 +1,8 @@
 # Local deployment secrets (copy from .env.example)
 .env
 
+# Generated on the deploy host by deploy/ansible
+.compose.runtime.yml
+
 # Runtime data: mitmproxy CA private key, traffic DB, transcripts
 data/

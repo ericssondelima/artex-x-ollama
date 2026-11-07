@@ -1,0 +1,9 @@
+# Written by the Ansible playbook. This host builds artex:local because
+# autumn27/artex is not pullable, and the container reaches Ollama on the host.
+services:
+  artex:
+    image: {{ artex_image }}
+    build:
+      context: .
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
