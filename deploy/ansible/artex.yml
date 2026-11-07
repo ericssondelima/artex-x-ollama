@@ -1,0 +1,124 @@
+---
+# Pull main, build the local image, and recreate the stack.
+#
+#   ansible-playbook -i inventory.ini artex.yml
+#
+# Uses docker-compose.yml plus a generated runtime file. The tracked
+# docker-compose.override.yml is left untouched and is not applied: it belongs
+# to another workstation.
+
+- name: Deploy Artex
+  hosts: artex
+  gather_facts: false
+  vars:
+    artex_dir: /home/user/artex-x-ollama
+    artex_repo: https://github.com/ericssondelima/artex-x-ollama.git
+    artex_image: artex:local
+    ollama_model: qwen2.5-coder:7b
+    ollama_base_url: http://host.docker.internal:11434/v1
+  tasks:
+    - name: Clone the repository
+      ansible.builtin.command:
+        argv:
+          - git
+          - clone
+          - --branch
+          - main
+          - --depth
+          - "1"
+          - "{{ artex_repo }}"
+          - "{{ artex_dir }}"
+      args:
+        creates: "{{ artex_dir }}/.git"
+
+    - name: Record the revision before update
+      ansible.builtin.command: git rev-parse HEAD
+      args:
+        chdir: "{{ artex_dir }}"
+      register: revision_before
+      changed_when: false
+
+    - name: Fast-forward to origin/main
+      ansible.builtin.shell: |
+        set -euo pipefail
+        git fetch --depth 1 origin main
+        git reset --hard origin/main
+      args:
+        chdir: "{{ artex_dir }}"
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Record the revision after update
+      ansible.builtin.command: git rev-parse HEAD
+      args:
+        chdir: "{{ artex_dir }}"
+      register: revision_after
+      changed_when: revision_before.stdout != revision_after.stdout
+
+    - name: Write the runtime Compose file
+      ansible.builtin.template:
+        src: compose.runtime.yml.j2
+        dest: "{{ artex_dir }}/.compose.runtime.yml"
+        mode: "0644"
+
+    - name: Create .env on first install
+      ansible.builtin.shell: |
+        set -euo pipefail
+        umask 077
+        pw=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 24)
+        printf '%s\n' \
+          'ARTEX_TAG=latest' \
+          'POSTGRES_USER=artex' \
+          "POSTGRES_PASSWORD=${pw}" \
+          'POSTGRES_DB=artex' \
+          'ANTHROPIC_API_KEY=' \
+          'OPENAI_API_KEY=' \
+          'ARTEX_LLM_PROVIDER=ollama' \
+          'ARTEX_LLM_MODEL={{ ollama_model }}' \
+          'ARTEX_LLM_BASE_URL={{ ollama_base_url }}' \
+          'ARTEX_LLM_PROXY=' \
+          > .env
+      args:
+        chdir: "{{ artex_dir }}"
+        executable: /bin/bash
+        creates: "{{ artex_dir }}/.env"
+      no_log: true
+
+    - name: Ensure the Postgres volume exists
+      ansible.builtin.command: docker volume create artex_pgdata
+      register: postgres_volume
+      changed_when: postgres_volume.stdout is search('artex_pgdata') and postgres_volume.stderr | length > 0
+
+    - name: Build the image and recreate the stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - -f
+          - docker-compose.yml
+          - -f
+          - .compose.runtime.yml
+          - up
+          - -d
+          - --build
+          - --force-recreate
+          - --remove-orphans
+      args:
+        chdir: "{{ artex_dir }}"
+      register: compose_up
+      changed_when: true
+
+    - name: Wait until Artex answers
+      ansible.builtin.command:
+        argv:
+          - curl
+          - -fsS
+          - -o
+          - /dev/null
+          - --retry
+          - "15"
+          - --retry-delay
+          - "2"
+          - --retry-all-errors
+          - http://127.0.0.1:8787/
+      changed_when: false

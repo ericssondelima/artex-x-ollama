@@ -409,7 +409,7 @@ func bareArgumentsCall(obj map[string]any, allowed map[string]bool) (llm.Content
 		}
 	}
 	// gpt-oss prints the deferred-tool lookup as the whole reply:
-	// {"query":"select:mcp__hexstrike__subfinder_scan"}
+	// {"query":"select:mcp__tools__subfinder_scan"}
 	// With no tool name, the worker loop treats that as the final answer.
 	if q, ok := bareSearchQuery(obj); ok && allowed["SearchExtraTools"] {
 		hits["SearchExtraTools"] = true
@@ -530,7 +530,7 @@ func planIntents(arr []any) []map[string]any {
 }
 
 // unwrapToolSearch turns a meta step such as
-// {"type":"SEARCH_TOOLS","params":{"name":"mcp__hexstrike__subfinder_scan"}}
+// {"type":"SEARCH_TOOLS","params":{"name":"mcp__tools__subfinder_scan"}}
 // into a direction that names the real tool. The copy is shallow so the
 // caller's object stays intact.
 func unwrapToolSearch(obj map[string]any) map[string]any {
