@@ -9,7 +9,7 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// mcpToolName matches a HexStrike (or any MCP) tool id written into a constraint.
+// mcpToolName matches an MCP tool id written into a constraint.
 var mcpToolName = regexp.MustCompile(`mcp__[A-Za-z0-9_]+`)
 
 var bashWord = regexp.MustCompile(`(?i)\bBash\b`)

@@ -13,13 +13,13 @@ import (
 func hexCatalog() map[string]bool {
 	names := []string{
 		"Bash", "Write", "SearchExtraTools",
-		"mcp__hexstrike__subfinder_scan",
-		"mcp__hexstrike__dnsenum_scan",
-		"mcp__hexstrike__detect_technologies_ai",
-		"mcp__hexstrike__waybackurls_discovery",
-		"mcp__hexstrike__nmap_scan",
-		"mcp__hexstrike__nmap_advanced_scan",
-		"mcp__hexstrike__httpx_probe",
+		"mcp__tools__subfinder_scan",
+		"mcp__tools__dnsenum_scan",
+		"mcp__tools__detect_technologies_ai",
+		"mcp__tools__waybackurls_discovery",
+		"mcp__tools__nmap_scan",
+		"mcp__tools__nmap_advanced_scan",
+		"mcp__tools__httpx_probe",
 	}
 	known := map[string]bool{}
 	for _, n := range names {
@@ -36,17 +36,17 @@ func TestResolveToolCall_FixesObservedFailures(t *testing.T) {
 		want    string
 		contain string
 	}{
-		{"mcp__hexstrike__dns_scan", `{"domain":"example.com"}`, "mcp__hexstrike__dnsenum_scan", `"domain":"example.com"`},
-		{"mcp__hexstrike__technology_scan", `{"domain":"example.com"}`, "mcp__hexstrike__detect_technologies_ai", `"domain"`},
-		{"mcp__hexstrike__archive_query", `{"query":"example.com"}`, "mcp__hexstrike__waybackurls_discovery", `"query"`},
+		{"mcp__tools__dns_scan", `{"domain":"example.com"}`, "mcp__tools__dnsenum_scan", `"domain":"example.com"`},
+		{"mcp__tools__technology_scan", `{"domain":"example.com"}`, "mcp__tools__detect_technologies_ai", `"domain"`},
+		{"mcp__tools__archive_query", `{"query":"example.com"}`, "mcp__tools__waybackurls_discovery", `"query"`},
 		{"container.exec", `{"cmd":["bash","-lc","echo test"]}`, "Bash", `"command":"echo test"`},
 		{"exec", `{"cmd":["bash","-lc","env | grep TARGET"]}`, "Bash", `"command":"env | grep TARGET"`},
-		{"tool", `{"name":"mcp__hexstrike__subfinder_scan","arguments":"example.com"}`, "mcp__hexstrike__subfinder_scan", `"domain":"example.com"`},
-		{"tool.run", `{"name":"mcp__hexstrike__subfinder_scan","arguments":{"target":"example.com"}}`, "mcp__hexstrike__subfinder_scan", `"target":"example.com"`},
-		{"SearchExtraTools", `{"name":"-1::/mcp__hexstrike__subfinder_scan"}`, "SearchExtraTools", `"query":"select:mcp__hexstrike__subfinder_scan"`},
-		{"agent.run", `{"name":"SearchExtraTools","arguments":{"query":"mcp__hexstrike__subfinder_scan"}}`, "SearchExtraTools", `"query":"mcp__hexstrike__subfinder_scan"`},
-		{"assistant", `{"tool_name":"mcp__hexstrike__subfinder_scan","params":{"domain":"example.com"}}`, "mcp__hexstrike__subfinder_scan", `"domain":"example.com"`},
-		{"search_extra_tools", `{"search_query":"mcp__hexstrike__nmap_scan"}`, "SearchExtraTools", `"query":"select:mcp__hexstrike__nmap_scan"`},
+		{"tool", `{"name":"mcp__tools__subfinder_scan","arguments":"example.com"}`, "mcp__tools__subfinder_scan", `"domain":"example.com"`},
+		{"tool.run", `{"name":"mcp__tools__subfinder_scan","arguments":{"target":"example.com"}}`, "mcp__tools__subfinder_scan", `"target":"example.com"`},
+		{"SearchExtraTools", `{"name":"-1::/mcp__tools__subfinder_scan"}`, "SearchExtraTools", `"query":"select:mcp__tools__subfinder_scan"`},
+		{"agent.run", `{"name":"SearchExtraTools","arguments":{"query":"mcp__tools__subfinder_scan"}}`, "SearchExtraTools", `"query":"mcp__tools__subfinder_scan"`},
+		{"assistant", `{"tool_name":"mcp__tools__subfinder_scan","params":{"domain":"example.com"}}`, "mcp__tools__subfinder_scan", `"domain":"example.com"`},
+		{"search_extra_tools", `{"search_query":"mcp__tools__nmap_scan"}`, "SearchExtraTools", `"query":"select:mcp__tools__nmap_scan"`},
 		{"repo_browser.create_file", `{"path":"notes.txt","content":"hi"}`, "Write", `"file_path":"notes.txt"`},
 	}
 	for _, tc := range cases {
@@ -55,7 +55,7 @@ func TestResolveToolCall_FixesObservedFailures(t *testing.T) {
 			t.Fatalf("%s -> ok=%v name=%s input=%s", tc.name, ok, gotName, gotIn)
 		}
 	}
-	if _, _, ok := resolveToolCall("mcp__hexstrike__nmap", json.RawMessage(`{"target":"example.com"}`), known); ok {
+	if _, _, ok := resolveToolCall("mcp__tools__nmap", json.RawMessage(`{"target":"example.com"}`), known); ok {
 		t.Fatal("ambiguous nmap was rewritten")
 	}
 	if _, _, ok := resolveToolCall("Bash", json.RawMessage(`{"command":"true"}`), known); ok {
@@ -71,17 +71,17 @@ func TestResolveToolCall_FixesObservedFailures(t *testing.T) {
 
 func TestTextToolProvider_RewritesNativeToolName(t *testing.T) {
 	p := textToolProvider{inner: stubProvider{msg: llm.Message{Role: llm.RoleAssistant, Content: []llm.ContentBlock{{
-		Type: llm.BlockToolUse, ID: "c1", Name: "mcp__hexstrike__technology_scan", Input: json.RawMessage(`{"domain":"example.com"}`),
+		Type: llm.BlockToolUse, ID: "c1", Name: "mcp__tools__technology_scan", Input: json.RawMessage(`{"domain":"example.com"}`),
 	}}}, stop: "tool_use"}}
 	msg, stop, _, err := p.Complete(context.Background(), llm.CompletionRequest{
 		Tools:  []llm.ToolSchema{{Name: "Bash"}},
-		System: []string{"<available-deferred-tools>\nmcp__hexstrike__detect_technologies_ai\nmcp__hexstrike__dnsenum_scan\n</available-deferred-tools>"},
+		System: []string{"<available-deferred-tools>\nmcp__tools__detect_technologies_ai\nmcp__tools__dnsenum_scan\n</available-deferred-tools>"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	uses := msg.ToolUses()
-	if stop != "tool_use" || len(uses) != 1 || uses[0].Name != "mcp__hexstrike__detect_technologies_ai" {
+	if stop != "tool_use" || len(uses) != 1 || uses[0].Name != "mcp__tools__detect_technologies_ai" {
 		t.Fatalf("stop=%s uses=%v", stop, uses)
 	}
 }
@@ -105,7 +105,7 @@ func TestRewriteToolEvents_ReplacesInputDeltas(t *testing.T) {
 }
 
 func TestNormalizeIntentPayload_TaskAndPriorityWord(t *testing.T) {
-	in := []byte(`{"intents":[{"priority":"high","task":"Deduplicate discovered assets","tool":"mcp__hexstrike__deduplicate_assets"}]}`)
+	in := []byte(`{"intents":[{"priority":"high","task":"Deduplicate discovered assets","tool":"mcp__tools__deduplicate_assets"}]}`)
 	var out struct {
 		Intents []struct {
 			Summary  string `json:"summary"`
@@ -118,7 +118,7 @@ func TestNormalizeIntentPayload_TaskAndPriorityWord(t *testing.T) {
 	if len(out.Intents) != 1 || out.Intents[0].Priority != 8 {
 		t.Fatalf("out=%+v", out)
 	}
-	if !strings.Contains(out.Intents[0].Summary, "Deduplicate discovered assets") || !strings.Contains(out.Intents[0].Summary, "mcp__hexstrike__deduplicate_assets") {
+	if !strings.Contains(out.Intents[0].Summary, "Deduplicate discovered assets") || !strings.Contains(out.Intents[0].Summary, "mcp__tools__deduplicate_assets") {
 		t.Fatalf("summary=%q", out.Intents[0].Summary)
 	}
 }

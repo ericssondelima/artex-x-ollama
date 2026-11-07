@@ -7,7 +7,7 @@ import (
 )
 
 func TestExplicitConstraintLines(t *testing.T) {
-	desc := "Target: example.com.\nAllowed: public sources only for example.com. Collect only with mcp__hexstrike__subfinder_scan.\nForbidden: any traffic to example.com. Do not collect with Bash.\n"
+	desc := "Target: example.com.\nAllowed: public sources only for example.com. Collect only with mcp__tools__subfinder_scan.\nForbidden: any traffic to example.com. Do not collect with Bash.\n"
 	got := ExplicitConstraintLines(desc, "Mode: recon")
 	if len(got) != 2 || got[0].Kind != "allow" || got[1].Kind != "deny" {
 		t.Fatalf("lines: %+v", got)

@@ -42,8 +42,8 @@ func TestParseTextToolCalls_KeyedGoalDecomposition(t *testing.T) {
 
 func TestParseTextToolCalls_PlannerPlanBecomesAddIntent(t *testing.T) {
 	text := "```json\n" + `[
-  {"id":"intent_001","type":"mcp__hexstrike__subfinder_scan","name":"Run subfinder for example.com","inputs":{"target":"example.com"}},
-  {"id":"intent_002","type":"mcp__hexstrike__waybackurls_discovery","name":"Historical URLs","inputs":{"target":"example.com"}}
+  {"id":"intent_001","type":"mcp__tools__subfinder_scan","name":"Run subfinder for example.com","inputs":{"target":"example.com"}},
+  {"id":"intent_002","type":"mcp__tools__waybackurls_discovery","name":"Historical URLs","inputs":{"target":"example.com"}}
 ]` + "\n```"
 	calls := parseTextToolCalls(text, []llm.ToolSchema{{Name: "add_intent"}, {Name: "Bash"}})
 	if len(calls) != 1 || calls[0].Name != "add_intent" {
@@ -60,26 +60,26 @@ func TestParseTextToolCalls_PlannerPlanBecomesAddIntent(t *testing.T) {
 	if len(in.Intents) != 2 {
 		t.Fatalf("intents=%d", len(in.Intents))
 	}
-	if !strings.Contains(in.Intents[0].Summary, "mcp__hexstrike__subfinder_scan") || !strings.Contains(in.Intents[0].Summary, "example.com") {
+	if !strings.Contains(in.Intents[0].Summary, "mcp__tools__subfinder_scan") || !strings.Contains(in.Intents[0].Summary, "example.com") {
 		t.Fatalf("summary: %s", in.Intents[0].Summary)
 	}
 }
 
 func TestParseTextToolCalls_SearchToolsObjectBecomesAddIntent(t *testing.T) {
-	text := `{"id":"intent_1","type":"SEARCH_TOOLS","params":{"name":"mcp__hexstrike__subfinder_scan"}}`
+	text := `{"id":"intent_1","type":"SEARCH_TOOLS","params":{"name":"mcp__tools__subfinder_scan"}}`
 	calls := parseTextToolCalls(text, []llm.ToolSchema{{Name: "add_intent"}, {Name: "Bash"}})
 	if len(calls) != 1 || calls[0].Name != "add_intent" {
 		t.Fatalf("got %#v", calls)
 	}
-	if !strings.Contains(string(calls[0].Input), "mcp__hexstrike__subfinder_scan") {
+	if !strings.Contains(string(calls[0].Input), "mcp__tools__subfinder_scan") {
 		t.Fatalf("input: %s", calls[0].Input)
 	}
 }
 
 func TestParseTextToolCalls_TagAndEnvelope(t *testing.T) {
-	text := `<tool_call>{"name":"mcp__hexstrike__subfinder_scan","arguments":{"target":"example.com"}}</tool_call>`
-	calls := parseTextToolCalls(text, []llm.ToolSchema{{Name: "mcp__hexstrike__subfinder_scan"}, {Name: "add_intent"}})
-	if len(calls) != 1 || calls[0].Name != "mcp__hexstrike__subfinder_scan" {
+	text := `<tool_call>{"name":"mcp__tools__subfinder_scan","arguments":{"target":"example.com"}}</tool_call>`
+	calls := parseTextToolCalls(text, []llm.ToolSchema{{Name: "mcp__tools__subfinder_scan"}, {Name: "add_intent"}})
+	if len(calls) != 1 || calls[0].Name != "mcp__tools__subfinder_scan" {
 		t.Fatalf("got %#v", calls)
 	}
 	if !strings.Contains(string(calls[0].Input), `"target":"example.com"`) {
@@ -91,7 +91,7 @@ func TestParseTextToolCalls_ToolNameObjectBecomesAddIntent(t *testing.T) {
 	text := "```json\n" + `{
   "id": 62,
   "task": "Perform passive reconnaissance against example.com",
-  "tool_name": "mcp__hexstrike__dns_scan",
+  "tool_name": "mcp__tools__dns_scan",
   "schema": {"target": "example.com", "type": "dns_records"}
 }` + "\n```"
 	calls := parseTextToolCalls(text, []llm.ToolSchema{{Name: "add_intent"}, {Name: "Bash"}})
@@ -99,7 +99,7 @@ func TestParseTextToolCalls_ToolNameObjectBecomesAddIntent(t *testing.T) {
 		t.Fatalf("got %#v", calls)
 	}
 	got := string(calls[0].Input)
-	if !strings.Contains(got, "passive reconnaissance") || !strings.Contains(got, "mcp__hexstrike__dns_scan") || !strings.Contains(got, "example.com") {
+	if !strings.Contains(got, "passive reconnaissance") || !strings.Contains(got, "mcp__tools__dns_scan") || !strings.Contains(got, "example.com") {
 		t.Fatalf("input: %s", got)
 	}
 }
@@ -127,29 +127,29 @@ func TestParseTextToolCalls_MarkdownIntentBecomesAddIntent(t *testing.T) {
 }
 
 func TestParseTextToolCalls_SearchExtraToolsIntent(t *testing.T) {
-	text := "```json\n{\"id\":82,\"type\":\"SearchExtraTools\",\"query\":\"select:mcp__hexstrike__subfinder_scan\",\"description\":\"Discover the schema for mcp__hexstrike__subfinder_scan so we can execute a passive scan of example.com.\"}\n```"
+	text := "```json\n{\"id\":82,\"type\":\"SearchExtraTools\",\"query\":\"select:mcp__tools__subfinder_scan\",\"description\":\"Discover the schema for mcp__tools__subfinder_scan so we can execute a passive scan of example.com.\"}\n```"
 	calls := parseTextToolCalls(text, []llm.ToolSchema{{Name: "add_intent"}})
 	if len(calls) != 1 || calls[0].Name != "add_intent" {
 		t.Fatalf("intent: %#v", calls)
 	}
-	if !strings.Contains(string(calls[0].Input), "mcp__hexstrike__subfinder_scan") {
+	if !strings.Contains(string(calls[0].Input), "mcp__tools__subfinder_scan") {
 		t.Fatalf("tool name dropped: %s", calls[0].Input)
 	}
 }
 
 func TestParseTextToolCalls_BareSearchQuery(t *testing.T) {
-	text := `{"query":"select:mcp__hexstrike__subfinder_scan"}`
+	text := `{"query":"select:mcp__tools__subfinder_scan"}`
 	calls := parseTextToolCalls(text, []llm.ToolSchema{{Name: "SearchExtraTools"}, {Name: "Bash"}})
 	if len(calls) != 1 || calls[0].Name != "SearchExtraTools" {
 		t.Fatalf("bare search: %#v", calls)
 	}
-	if !strings.Contains(string(calls[0].Input), "select:mcp__hexstrike__subfinder_scan") {
+	if !strings.Contains(string(calls[0].Input), "select:mcp__tools__subfinder_scan") {
 		t.Fatalf("query dropped: %s", calls[0].Input)
 	}
 	if calls = parseTextToolCalls(text, []llm.ToolSchema{{Name: "Bash"}}); len(calls) != 0 {
 		t.Fatalf("search recovered without the tool: %#v", calls)
 	}
-	if calls = parseTextToolCalls(`{"query":"select:mcp__hexstrike__subfinder_scan","note":"later"}`, []llm.ToolSchema{{Name: "SearchExtraTools"}}); len(calls) != 0 {
+	if calls = parseTextToolCalls(`{"query":"select:mcp__tools__subfinder_scan","note":"later"}`, []llm.ToolSchema{{Name: "SearchExtraTools"}}); len(calls) != 0 {
 		t.Fatalf("mixed object recovered: %#v", calls)
 	}
 }

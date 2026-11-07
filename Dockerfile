@@ -82,9 +82,6 @@ RUN npm install -g @playwright/mcp@latest @playwright/cli@latest playwright@late
     && playwright-cli --help \
     && playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
-# HexStrike's MCP client is a Python stdio process. The package has to be in the
-# image; a later `docker exec pip install` disappears when the container is recreated.
-RUN pip install --no-cache-dir 'mcp<2' requests
 WORKDIR /app
 # pre-built binary for the matching architecture (dist/amd64/artex or dist/arm64/artex)
 COPY dist/${TARGETARCH}/artex /app/artex
